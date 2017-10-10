@@ -8,6 +8,8 @@ using System.Web;
 using System.Web.Mvc;
 using TimeKeeper.Data;
 using TimeKeeper.Models;
+using PagedList.Mvc;
+using PagedList;
 
 namespace TimeKeeper.Controllers
 {
@@ -16,9 +18,62 @@ namespace TimeKeeper.Controllers
         private EmployeeContext db = new EmployeeContext();
 
         // GET: Employee
-        public ActionResult Index()
+
+            //The paramters will allow user to sort via first name or last name, and search with a filter, and display pages
+        public ActionResult Index(string sortOrder, string currentFilter, string searchString, int? page)
         {
-            return View(db.Employees.ToList());
+       
+          
+            //This creates a tempary sorting order (which will be default if null)
+            ViewBag.CurrentSort = sortOrder;
+            
+            //This checks to see if searchstring is null or not, and if searchstring IS NULL , then list page one
+            if (searchString != null)
+            {
+                page = 1;
+               
+            }
+            else
+            {
+                // if it's NOT NULL then assign the current filter to the searchstring paramter
+                searchString = currentFilter;
+            }
+
+            // filter the values of teh database
+            var Results = (IQueryable<EmployeeModel>)db.Employees;
+
+
+            //assign searchstring to whatever the currentfilter is
+            ViewBag.CurrentFilter = searchString;
+
+            if (!String.IsNullOrEmpty(searchString))
+            {
+                Results = Results.Where(x => x.EmployeeFirstName.Contains(searchString)
+                || x.EmployeeLastName.Contains(searchString));
+            }
+
+            switch (sortOrder)
+            {
+                case "EmployeeFirstName":
+                    Results = Results.OrderByDescending(x => x.EmployeeFirstName);
+                    break;
+                case "EmployeeLastName":
+                    Results = Results.OrderByDescending(x => x.EmployeeLastName);
+                    break;
+                default:
+                    Results = Results.OrderByDescending(x => x.Id);
+                    break;
+                
+            }
+
+
+            int pageSize = 6;
+            int pageNumber = (page ?? 1);
+
+            //return the results of the search
+            return View(Results.ToPagedList(pageNumber, pageSize));
+
+            //return View(db.Employees.ToList());
         }
 
         // GET: Employee/Details/5
